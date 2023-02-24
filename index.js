@@ -9,38 +9,8 @@ app.use(cors());
 
 const server = http.createServer(app);
 
-let stocks = []
-const url = "https://bigpara.hurriyet.com.tr/borsa/canli-borsa/";
-
-const getData = async () => {
-  const response = await axios.get(url);
-  const $ = cheerio.load(response.data);
-  const booksa = $('div[class="tBody ui-unsortable"] > ul');
-  booksa.each(function () {
-    title = $(this).find('li[class="cell064 tal arrow"]').text().trim();
-    son = $(this).find('li[class="cell048 node-c"]').text().trim();
-    alis = $(this).find('li[class="cell048 node-f"]').text().trim();
-    satis = $(this).find('li[class="cell048 node-g"]').text().trim();
-    yuksek = $(this).find('li[class="cell048 node-h"]').text().trim();
-    dusus = $(this).find('li[class="cell048 node-i"]').text().trim();
-    aylik_ort = $(this).find('li[class="cell048 node-j"]').text().trim();
-    yuzde = $(this).find('li[class="cell048 node-e"]').text().trim();
-    hacim_lot = $(this).find('li[class="cell064 node-k"]').text().trim();
-    hacim_tl = $(this).find('li[class="cell064 node-l"]').text().trim();
-    son_islem = $(this).find('li[class="cell064 node-s"]').text().trim();
-
-
-    stocks.push({title, son, alis,satis,yuksek,dusus,aylik_ort,yuzde,hacim_lot,hacim_tl,son_islem})
-
-  });
-
-// console.log(stocks)
-
-};
-
-getData();
-
-
+let companyCode = "";
+let companyLink = "";
 
 const io = new Server(server, {
   cors: {
@@ -52,18 +22,32 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
+  socket.on("send_message", async (data) => {
+    companyCode = data.itemTitle;
+    companyLink = data.itemLink;
 
+    const url2 = `https://bigpara.hurriyet.com.tr/borsa/hisse-fiyatlari/${companyLink}`;
+    let news = [];
 
-  socket.on("send_message", (data) => {
-    socket.emit("receive_message", stocks);
-    console.log("merhaba")
+    try {
+      const response = await axios.get(url2);
+      const $ = cheerio.load(response.data);
+      const booksa = $('div[class="tBody"] > ul');
+      booksa.each(function () {
+        const date = $(this).find('li[class="cell031 fsn"]').text().trim();
+        const title = $(this).find('li[class="cell029"]').text().trim();
+        const link = $(this).find('li[class="cell029"]').find("a").attr("href");
+
+        news.push({ date, title, link });
+      });
+
+      socket.emit("receive_message", news);
+    } catch (error) {
+      console.error(error);
+    }
   });
-
-
 });
 
 server.listen(3001, () => {
   console.log("SERVER RUNNING");
 });
-
-
