@@ -14,7 +14,7 @@ let companyLink = "";
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://hisse-dunyasi.netlify.app/stock",
     methods: ["GET", "POST"],
   },
 });
